@@ -34,6 +34,13 @@
 #endif // __ANDROID_API__ >= 26
 #endif // NCNN_PLATFORM_API
 
+#include <vulkan/vulkan.h>
+
+#if ENABLE_VMA_ALLOCATOR
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+#endif // ENABLE_VMA_ALLOCATOR
+
 namespace ncnn {
 
 // the alignment of all the allocated buffers
@@ -228,6 +235,9 @@ class NCNN_EXPORT VkBufferMemory
 {
 public:
     VkBuffer buffer;
+#if ENABLE_VMA_ALLOCATOR
+    VmaAllocation vma_allocation;
+#endif // ENABLE_VMA_ALLOCATOR
 
     // the base offset assigned by allocator
     size_t offset;
@@ -298,9 +308,15 @@ public:
     uint32_t reserved_type_index;
     bool mappable;
     bool coherent;
+#if ENABLE_VMA_ALLOCATOR
+    VmaAllocator vmaAllocator; //vma
+#endif // ENABLE_VMA_ALLOCATOR
 
 protected:
     VkBuffer create_buffer(size_t size, VkBufferUsageFlags usage);
+#if ENABLE_VMA_ALLOCATOR
+    void create_buffer(size_t size, VkBufferUsageFlags usage, VkBuffer& vkbuf, VmaAllocation& vma_allocation);
+#endif // ENABLE_VMA_ALLOCATOR
     VkDeviceMemory allocate_memory(size_t size, uint32_t memory_type_index);
     VkDeviceMemory allocate_dedicated_memory(size_t size, uint32_t memory_type_index, VkImage image, VkBuffer buffer);
 

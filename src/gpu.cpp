@@ -245,10 +245,15 @@ public:
     int support_VK_EXT_descriptor_indexing;
     int support_VK_EXT_memory_budget;
     int support_VK_EXT_queue_family_foreign;
+    int support_VK_KHR_get_physical_device_properties2;
 #if __ANDROID_API__ >= 26
     int support_VK_ANDROID_external_memory_android_hardware_buffer;
 #endif // __ANDROID_API__ >= 26
     int support_VK_NV_cooperative_matrix;
+    int support_VK_AMD_device_coherent_memory;
+    int support_VK_KHR_buffer_device_address;
+    int support_VK_EXT_memory_priority;
+
 };
 
 GpuInfo::GpuInfo()
@@ -631,6 +636,11 @@ int GpuInfo::support_VK_EXT_queue_family_foreign() const
     return d->support_VK_EXT_queue_family_foreign;
 }
 
+int GpuInfo::support_VK_KHR_get_physical_device_properties2() const
+{
+    return d->support_VK_KHR_get_physical_device_properties2;
+}
+
 #if __ANDROID_API__ >= 26
 int GpuInfo::support_VK_ANDROID_external_memory_android_hardware_buffer() const
 {
@@ -641,6 +651,21 @@ int GpuInfo::support_VK_ANDROID_external_memory_android_hardware_buffer() const
 int GpuInfo::support_VK_NV_cooperative_matrix() const
 {
     return d->support_VK_NV_cooperative_matrix;
+}
+
+int GpuInfo::support_VK_AMD_device_coherent_memory() const
+{
+    return d->support_VK_AMD_device_coherent_memory;
+}
+
+int GpuInfo::support_VK_KHR_buffer_device_address() const
+{
+    return d->support_VK_KHR_buffer_device_address;
+}
+
+int GpuInfo::support_VK_EXT_memory_priority() const
+{
+    return d->support_VK_EXT_memory_priority;
 }
 
 static int init_instance_extension()
@@ -1339,10 +1364,14 @@ int create_gpu_instance()
         gpu_info.support_VK_EXT_descriptor_indexing = 0;
         gpu_info.support_VK_EXT_memory_budget = 0;
         gpu_info.support_VK_EXT_queue_family_foreign = 0;
+        gpu_info.support_VK_KHR_get_physical_device_properties2 = 0;
 #if __ANDROID_API__ >= 26
         gpu_info.support_VK_ANDROID_external_memory_android_hardware_buffer = 0;
 #endif // __ANDROID_API__ >= 26
         gpu_info.support_VK_NV_cooperative_matrix = 0;
+        gpu_info.support_VK_AMD_device_coherent_memory = 0;
+        gpu_info.support_VK_KHR_buffer_device_address = 0;
+        gpu_info.support_VK_EXT_memory_priority = 0;
         for (uint32_t j = 0; j < deviceExtensionPropertyCount; j++)
         {
             const VkExtensionProperties& exp = deviceExtensionProperties[j];
@@ -1392,12 +1421,20 @@ int create_gpu_instance()
                 gpu_info.support_VK_EXT_memory_budget = exp.specVersion;
             else if (strcmp(exp.extensionName, "VK_EXT_queue_family_foreign") == 0)
                 gpu_info.support_VK_EXT_queue_family_foreign = exp.specVersion;
+            else if (strcmp(exp.extensionName, "VK_KHR_get_physical_device_properties2") == 0)
+                gpu_info.support_VK_KHR_get_physical_device_properties2 = exp.specVersion;
 #if __ANDROID_API__ >= 26
             else if (strcmp(exp.extensionName, "VK_ANDROID_external_memory_android_hardware_buffer") == 0)
                 gpu_info.support_VK_ANDROID_external_memory_android_hardware_buffer = exp.specVersion;
 #endif // __ANDROID_API__ >= 26
             else if (strcmp(exp.extensionName, "VK_NV_cooperative_matrix") == 0)
                 gpu_info.support_VK_NV_cooperative_matrix = exp.specVersion;
+            else if (strcmp(exp.extensionName, "VK_AMD_device_coherent_memory") == 0)
+                gpu_info.support_VK_AMD_device_coherent_memory = exp.specVersion;
+            else if (strcmp(exp.extensionName, "VK_KHR_buffer_device_address") == 0)
+                gpu_info.support_VK_KHR_buffer_device_address = exp.specVersion;
+            else if (strcmp(exp.extensionName, "VK_EXT_memory_priority") == 0)
+                gpu_info.support_VK_EXT_memory_priority = exp.specVersion;
         }
 
         // check features
@@ -1969,12 +2006,20 @@ VulkanDevice::VulkanDevice(int device_index)
         enabledExtensions.push_back("VK_EXT_memory_budget");
     if (info.support_VK_EXT_queue_family_foreign())
         enabledExtensions.push_back("VK_EXT_queue_family_foreign");
+    if (info.support_VK_KHR_get_physical_device_properties2())
+        enabledExtensions.push_back("VK_KHR_get_physical_device_properties2");
 #if __ANDROID_API__ >= 26
     if (info.support_VK_ANDROID_external_memory_android_hardware_buffer())
         enabledExtensions.push_back("VK_ANDROID_external_memory_android_hardware_buffer");
 #endif // __ANDROID_API__ >= 26
     if (info.support_VK_NV_cooperative_matrix())
         enabledExtensions.push_back("VK_NV_cooperative_matrix");
+    if (info.support_VK_AMD_device_coherent_memory())
+        enabledExtensions.push_back("VK_AMD_device_coherent_memory");
+    if (info.support_VK_KHR_buffer_device_address())
+        enabledExtensions.push_back("VK_KHR_buffer_device_address");
+    if (info.support_VK_EXT_memory_priority())
+        enabledExtensions.push_back("VK_EXT_memory_priority");
 
     void* enabledExtensionFeatures = 0;
 

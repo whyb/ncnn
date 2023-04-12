@@ -358,6 +358,25 @@ void UnlockedPoolAllocator::fastFree(void* ptr)
 }
 
 #if NCNN_VULKAN
+
+#if ENABLE_VMA_ALLOCATOR
+static constexpr uint32_t GetVulkanApiVersion()
+{
+#if VMA_VULKAN_VERSION == 1003000
+    return VK_API_VERSION_1_3;
+#elif VMA_VULKAN_VERSION == 1002000
+    return VK_API_VERSION_1_2;
+#elif VMA_VULKAN_VERSION == 1001000
+    return VK_API_VERSION_1_1;
+#elif VMA_VULKAN_VERSION == 1000000
+    return VK_API_VERSION_1_0;
+#else
+#error Invalid VMA_VULKAN_VERSION.
+    return UINT32_MAX;
+#endif
+}
+#endif // ENABLE_VMA_ALLOCATOR
+
 VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     : vkdev(_vkdev)
 {
@@ -366,6 +385,54 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     reserved_type_index = (uint32_t)-1;
     mappable = false;
     coherent = false;
+
+#if ENABLE_VMA_ALLOCATOR
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = vkdev->info.physical_device();
+    allocatorInfo.device = vkdev->vkdevice();
+    allocatorInfo.instance = VkInstance();
+    allocatorInfo.vulkanApiVersion = GetVulkanApiVersion();
+
+    if (vkdev->info.support_VK_KHR_dedicated_allocation())
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT;
+    }
+    if (vkdev->info.support_VK_KHR_bind_memory2())
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT;
+    }
+#if !defined(VMA_MEMORY_BUDGET) || VMA_MEMORY_BUDGET == 1
+    if (vkdev->info.support_VK_EXT_memory_budget()
+        && (GetVulkanApiVersion() >= VK_API_VERSION_1_1 
+        || vkdev->info.support_VK_KHR_get_physical_device_properties2()))
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+    }
+#endif
+    if (vkdev->info.support_VK_AMD_device_coherent_memory())
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_AMD_DEVICE_COHERENT_MEMORY_BIT;
+    }
+    if (vkdev->info.support_VK_KHR_buffer_device_address())
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    }
+#if !defined(VMA_MEMORY_PRIORITY) || VMA_MEMORY_PRIORITY == 1
+    if (vkdev->info.support_VK_EXT_memory_priority())
+    {
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_PRIORITY_BIT;
+    }
+#endif
+
+#if VMA_DYNAMIC_VULKAN_FUNCTIONS
+    static VmaVulkanFunctions vulkanFunctions = {};
+    vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+    outInfo.pVulkanFunctions = &vulkanFunctions;
+#endif
+
+    vmaCreateAllocator(&allocatorInfo, &vmaAllocator);
+#endif // ENABLE_VMA_ALLOCATOR
 }
 
 VkAllocator::~VkAllocator()
@@ -375,6 +442,9 @@ VkAllocator::~VkAllocator()
 
 void VkAllocator::clear()
 {
+#if ENABLE_VMA_ALLOCATOR
+    vmaDestroyAllocator(vmaAllocator); //destroy vma allocator
+#endif // ENABLE_VMA_ALLOCATOR
 }
 
 static inline size_t round_up(size_t n, size_t multiple)
@@ -453,6 +523,31 @@ VkBuffer VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage)
 
     return buffer;
 }
+
+#if ENABLE_VMA_ALLOCATOR
+void VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage, VkBuffer& vkbuf, VmaAllocation& vma_allocation)
+{
+    VkBufferCreateInfo bufferCreateInfo;
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.pNext = 0;
+    bufferCreateInfo.flags = 0;
+    bufferCreateInfo.size = size;
+    bufferCreateInfo.usage = usage;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    bufferCreateInfo.queueFamilyIndexCount = 0;
+    bufferCreateInfo.pQueueFamilyIndices = 0;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+    VkResult ret = vmaCreateBuffer(vmaAllocator, &bufferCreateInfo, &allocInfo, &vkbuf, &vma_allocation, nullptr);
+    if (ret != VK_SUCCESS)
+    {
+        NCNN_LOGE("vmaCreateBuffer failed %d", ret);
+        return;
+    }
+    return;
+}
+#endif // ENABLE_VMA_ALLOCATOR
 
 VkDeviceMemory VkAllocator::allocate_memory(size_t size, uint32_t memory_type_index)
 {
@@ -643,8 +738,11 @@ void VkBlobAllocator::clear()
 
         if (mappable)
             vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
-
+#if ENABLE_VMA_ALLOCATOR
+        vmaDestroyBuffer(vmaAllocator, ptr->buffer, ptr->vma_allocation);
+#else
         vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
+#endif
         vkFreeMemory(vkdev->vkdevice(), ptr->memory, 0);
 
         delete ptr;
@@ -722,8 +820,11 @@ VkBufferMemory* VkBlobAllocator::fastMalloc(size_t size)
 
     // create new block
     VkBufferMemory* block = new VkBufferMemory;
-
+#if ENABLE_VMA_ALLOCATOR
+    create_buffer(new_block_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, block->buffer, block->vma_allocation);
+#else
     block->buffer = create_buffer(new_block_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+#endif
     block->offset = 0;
 
     // TODO respect VK_KHR_dedicated_allocation ?
@@ -1178,7 +1279,11 @@ void VkWeightAllocator::clear()
         if (mappable)
             vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
 
+#if ENABLE_VMA_ALLOCATOR
+        vmaDestroyBuffer(vmaAllocator, ptr->buffer, ptr->vma_allocation);
+#else
         vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
+#endif
         vkFreeMemory(vkdev->vkdevice(), ptr->memory, 0);
 
         delete ptr;
@@ -1192,7 +1297,11 @@ void VkWeightAllocator::clear()
         if (mappable)
             vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
 
+#if ENABLE_VMA_ALLOCATOR
+        vmaDestroyBuffer(vmaAllocator, ptr->buffer, ptr->vma_allocation);
+#else
         vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
+#endif
         vkFreeMemory(vkdev->vkdevice(), ptr->memory, 0);
 
         delete ptr;
@@ -1256,7 +1365,11 @@ VkBufferMemory* VkWeightAllocator::fastMalloc(size_t size)
     // create new block
     VkBufferMemory* block = new VkBufferMemory;
 
+#if ENABLE_VMA_ALLOCATOR
+    create_buffer(new_block_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, block->buffer, block->vma_allocation);
+#else
     block->buffer = create_buffer(new_block_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+#endif
     block->offset = 0;
 
     if (vkdev->info.support_VK_KHR_get_memory_requirements2() && vkdev->info.support_VK_KHR_dedicated_allocation())
@@ -1673,7 +1786,11 @@ void VkStagingAllocator::clear()
         //         NCNN_LOGE("VkStagingAllocator F %p", ptr->buffer);
 
         vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
+#if ENABLE_VMA_ALLOCATOR
+        vmaDestroyBuffer(vmaAllocator, ptr->buffer, ptr->vma_allocation);
+#else
         vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
+#endif
         vkFreeMemory(vkdev->vkdevice(), ptr->memory, 0);
 
         delete ptr;
@@ -1703,8 +1820,11 @@ VkBufferMemory* VkStagingAllocator::fastMalloc(size_t size)
     }
 
     VkBufferMemory* ptr = new VkBufferMemory;
-
+#if ENABLE_VMA_ALLOCATOR
+    create_buffer(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, ptr->buffer, ptr->vma_allocation);
+#else
     ptr->buffer = create_buffer(size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+#endif
     ptr->offset = 0;
 
     VkMemoryRequirements memoryRequirements;
@@ -1813,7 +1933,11 @@ VkBufferMemory* VkWeightStagingAllocator::fastMalloc(size_t size)
 {
     VkBufferMemory* ptr = new VkBufferMemory;
 
+#if ENABLE_VMA_ALLOCATOR
+    create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, ptr->buffer, ptr->vma_allocation);
+#else
     ptr->buffer = create_buffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+#endif
     ptr->offset = 0;
 
     VkMemoryRequirements memoryRequirements;
@@ -1847,7 +1971,11 @@ void VkWeightStagingAllocator::fastFree(VkBufferMemory* ptr)
     //     NCNN_LOGE("VkWeightStagingAllocator F %p", ptr->buffer);
 
     vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
+#if ENABLE_VMA_ALLOCATOR
+    vmaDestroyBuffer(vmaAllocator, ptr->buffer, ptr->vma_allocation);
+#else
     vkDestroyBuffer(vkdev->vkdevice(), ptr->buffer, 0);
+#endif
     vkFreeMemory(vkdev->vkdevice(), ptr->memory, 0);
 
     delete ptr;

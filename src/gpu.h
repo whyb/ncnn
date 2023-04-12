@@ -186,10 +186,15 @@ public:
     int support_VK_EXT_descriptor_indexing() const;
     int support_VK_EXT_memory_budget() const;
     int support_VK_EXT_queue_family_foreign() const;
+    int support_VK_KHR_get_physical_device_properties2() const;
 #if __ANDROID_API__ >= 26
     int support_VK_ANDROID_external_memory_android_hardware_buffer() const;
 #endif // __ANDROID_API__ >= 26
     int support_VK_NV_cooperative_matrix() const;
+    int support_VK_AMD_device_coherent_memory() const;
+    int support_VK_KHR_buffer_device_address() const;
+    int support_VK_EXT_memory_priority() const;
+
 
 private:
     GpuInfo(const GpuInfo&);
