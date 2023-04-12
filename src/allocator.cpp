@@ -428,7 +428,7 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     static VmaVulkanFunctions vulkanFunctions = {};
     vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
     vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
-    outInfo.pVulkanFunctions = &vulkanFunctions;
+    allocatorInfo.pVulkanFunctions = &vulkanFunctions;
 #endif
 
     vmaCreateAllocator(&allocatorInfo, &vmaAllocator);
