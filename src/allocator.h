@@ -37,7 +37,6 @@
 #include <vulkan/vulkan.h>
 
 #if ENABLE_VMA_ALLOCATOR
-#define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 #endif // ENABLE_VMA_ALLOCATOR
 

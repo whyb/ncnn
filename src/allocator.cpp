@@ -21,6 +21,11 @@
 #include <android/hardware_buffer.h>
 #endif // __ANDROID_API__ >= 26
 
+#if ENABLE_VMA_ALLOCATOR
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+#endif // ENABLE_VMA_ALLOCATOR
+
 namespace ncnn {
 
 Allocator::~Allocator()
