@@ -28,8 +28,40 @@
 namespace ncnn {
 
 // instance
+// global
+static Mutex g_instance_lock;
+
 NCNN_EXPORT int create_gpu_instance();
 NCNN_EXPORT void destroy_gpu_instance();
+
+class __ncnn_vulkan_instance_holder
+{
+public:
+    __ncnn_vulkan_instance_holder()
+    {
+        instance = 0;
+#if ENABLE_VALIDATION_LAYER
+        callback = 0;
+#endif
+    }
+
+    ~__ncnn_vulkan_instance_holder()
+    {
+        destroy_gpu_instance();
+    }
+
+    operator VkInstance()
+    {
+        return instance;
+    }
+
+    VkInstance instance;
+#if ENABLE_VALIDATION_LAYER
+    VkDebugUtilsMessengerEXT callback;
+#endif
+};
+
+NCNN_EXPORT VkInstance get_vkinstance();
 
 // instance extension capability
 extern int support_VK_KHR_external_memory_capabilities;

@@ -395,7 +395,7 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     VmaAllocatorCreateInfo allocatorInfo = {};
     allocatorInfo.physicalDevice = vkdev->info.physical_device();
     allocatorInfo.device = vkdev->vkdevice();
-    allocatorInfo.instance = VkInstance();
+    allocatorInfo.instance = get_vkinstance();
     allocatorInfo.vulkanApiVersion = GetVulkanApiVersion();
 
     if (vkdev->info.support_VK_KHR_dedicated_allocation())
