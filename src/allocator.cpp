@@ -409,7 +409,7 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
 #if !defined(VMA_MEMORY_BUDGET) || VMA_MEMORY_BUDGET == 1
     if (vkdev->info.support_VK_EXT_memory_budget()
         && (GetVulkanApiVersion() >= VK_API_VERSION_1_1 
-        || vkdev->info.support_VK_KHR_get_physical_device_properties2()))
+        || support_VK_KHR_get_physical_device_properties2))
     {
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     }

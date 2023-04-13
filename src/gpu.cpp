@@ -245,7 +245,6 @@ public:
     int support_VK_EXT_descriptor_indexing;
     int support_VK_EXT_memory_budget;
     int support_VK_EXT_queue_family_foreign;
-    int support_VK_KHR_get_physical_device_properties2;
 #if __ANDROID_API__ >= 26
     int support_VK_ANDROID_external_memory_android_hardware_buffer;
 #endif // __ANDROID_API__ >= 26
@@ -634,11 +633,6 @@ int GpuInfo::support_VK_EXT_memory_budget() const
 int GpuInfo::support_VK_EXT_queue_family_foreign() const
 {
     return d->support_VK_EXT_queue_family_foreign;
-}
-
-int GpuInfo::support_VK_KHR_get_physical_device_properties2() const
-{
-    return d->support_VK_KHR_get_physical_device_properties2;
 }
 
 #if __ANDROID_API__ >= 26
@@ -1364,7 +1358,6 @@ int create_gpu_instance()
         gpu_info.support_VK_EXT_descriptor_indexing = 0;
         gpu_info.support_VK_EXT_memory_budget = 0;
         gpu_info.support_VK_EXT_queue_family_foreign = 0;
-        gpu_info.support_VK_KHR_get_physical_device_properties2 = 0;
 #if __ANDROID_API__ >= 26
         gpu_info.support_VK_ANDROID_external_memory_android_hardware_buffer = 0;
 #endif // __ANDROID_API__ >= 26
@@ -1421,8 +1414,6 @@ int create_gpu_instance()
                 gpu_info.support_VK_EXT_memory_budget = exp.specVersion;
             else if (strcmp(exp.extensionName, "VK_EXT_queue_family_foreign") == 0)
                 gpu_info.support_VK_EXT_queue_family_foreign = exp.specVersion;
-            else if (strcmp(exp.extensionName, "VK_KHR_get_physical_device_properties2") == 0)
-                gpu_info.support_VK_KHR_get_physical_device_properties2 = exp.specVersion;
 #if __ANDROID_API__ >= 26
             else if (strcmp(exp.extensionName, "VK_ANDROID_external_memory_android_hardware_buffer") == 0)
                 gpu_info.support_VK_ANDROID_external_memory_android_hardware_buffer = exp.specVersion;
@@ -2006,8 +1997,6 @@ VulkanDevice::VulkanDevice(int device_index)
         enabledExtensions.push_back("VK_EXT_memory_budget");
     if (info.support_VK_EXT_queue_family_foreign())
         enabledExtensions.push_back("VK_EXT_queue_family_foreign");
-    if (info.support_VK_KHR_get_physical_device_properties2())
-        enabledExtensions.push_back("VK_KHR_get_physical_device_properties2");
 #if __ANDROID_API__ >= 26
     if (info.support_VK_ANDROID_external_memory_android_hardware_buffer())
         enabledExtensions.push_back("VK_ANDROID_external_memory_android_hardware_buffer");
