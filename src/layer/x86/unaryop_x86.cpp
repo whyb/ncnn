@@ -101,22 +101,22 @@ struct unary_op_abs
 {
     float func(const float& x) const
     {
-        return (float)fabs(x);
+        return (float)fabsf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
     {
-        return abs_sse(x);
+        return abs_ps(x);
     }
 #if __AVX__
     __m256 func_pack8(const __m256& x) const
     {
-        return abs_avx(x);
+        return abs256_ps(x);
     }
 #if __AVX512F__
     __m512 func_pack16(const __m512& x) const
     {
-        return abs_avx512(x);
+        return abs512_ps(x);
     }
 #endif // __AVX512F__
 #endif // __AVX__
@@ -153,7 +153,7 @@ struct unary_op_floor
 {
     float func(const float& x) const
     {
-        return (float)floor(x);
+        return (float)floorf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -179,7 +179,7 @@ struct unary_op_ceil
 {
     float func(const float& x) const
     {
-        return (float)ceil(x);
+        return (float)ceilf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -231,7 +231,7 @@ struct unary_op_sqrt
 {
     float func(const float& x) const
     {
-        return (float)sqrt(x);
+        return (float)sqrtf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -257,7 +257,7 @@ struct unary_op_rsqrt
 {
     float func(const float& x) const
     {
-        return (float)(1.f / sqrt(x));
+        return 1.f / sqrtf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -287,7 +287,7 @@ struct unary_op_exp
 {
     float func(const float& x) const
     {
-        return (float)exp(x);
+        return (float)expf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -313,7 +313,7 @@ struct unary_op_log
 {
     float func(const float& x) const
     {
-        return (float)log(x);
+        return (float)logf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -339,7 +339,7 @@ struct unary_op_sin
 {
     float func(const float& x) const
     {
-        return (float)sin(x);
+        return (float)sinf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -365,7 +365,7 @@ struct unary_op_cos
 {
     float func(const float& x) const
     {
-        return (float)cos(x);
+        return (float)cosf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -391,7 +391,7 @@ struct unary_op_tan
 {
     float func(const float& x) const
     {
-        return (float)tan(x);
+        return (float)tanf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -417,7 +417,7 @@ struct unary_op_asin
 {
     float func(const float& x) const
     {
-        return (float)asin(x);
+        return (float)asinf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -427,28 +427,12 @@ struct unary_op_asin
 #if __AVX__
     __m256 func_pack8(const __m256& x) const
     {
-        //TODO avx optimize
-        float tmp[8];
-        _mm256_storeu_ps(tmp, x);
-        tmp[0] = asin(tmp[0]);
-        tmp[1] = asin(tmp[1]);
-        tmp[2] = asin(tmp[2]);
-        tmp[3] = asin(tmp[3]);
-        tmp[4] = asin(tmp[4]);
-        tmp[5] = asin(tmp[5]);
-        tmp[6] = asin(tmp[6]);
-        tmp[7] = asin(tmp[7]);
-        return _mm256_loadu_ps(tmp);
+        return asin256_ps(x);
     }
 #if __AVX512F__
     __m512 func_pack16(const __m512& x) const
     {
-        //TODO avx512 optimize
-        float tmp[16];
-        _mm512_storeu_ps(tmp, x);
-        for (int i = 0; i < 16; i++)
-            tmp[i] = asin(tmp[i]);
-        return _mm512_loadu_ps(tmp);
+        return asin512_ps(x);
     }
 #endif // __AVX512F__
 #endif // __AVX__
@@ -459,7 +443,7 @@ struct unary_op_acos
 {
     float func(const float& x) const
     {
-        return (float)acos(x);
+        return (float)acosf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -469,28 +453,12 @@ struct unary_op_acos
 #if __AVX__
     __m256 func_pack8(const __m256& x) const
     {
-        //TODO avx optimize
-        float tmp[8];
-        _mm256_storeu_ps(tmp, x);
-        tmp[0] = acos(tmp[0]);
-        tmp[1] = acos(tmp[1]);
-        tmp[2] = acos(tmp[2]);
-        tmp[3] = acos(tmp[3]);
-        tmp[4] = acos(tmp[4]);
-        tmp[5] = acos(tmp[5]);
-        tmp[6] = acos(tmp[6]);
-        tmp[7] = acos(tmp[7]);
-        return _mm256_loadu_ps(tmp);
+        return acos256_ps(x);
     }
 #if __AVX512F__
     __m512 func_pack16(const __m512& x) const
     {
-        //TODO avx512 optimize
-        float tmp[16];
-        _mm512_storeu_ps(tmp, x);
-        for (int i = 0; i < 16; i++)
-            tmp[i] = acos(tmp[i]);
-        return _mm512_loadu_ps(tmp);
+        return acos512_ps(x);
     }
 #endif // __AVX512F__
 #endif // __AVX__
@@ -501,7 +469,7 @@ struct unary_op_atan
 {
     float func(const float& x) const
     {
-        return (float)atan(x);
+        return (float)atanf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -511,28 +479,12 @@ struct unary_op_atan
 #if __AVX__
     __m256 func_pack8(const __m256& x) const
     {
-        //TODO avx optimize
-        float tmp[8];
-        _mm256_storeu_ps(tmp, x);
-        tmp[0] = atan(tmp[0]);
-        tmp[1] = atan(tmp[1]);
-        tmp[2] = atan(tmp[2]);
-        tmp[3] = atan(tmp[3]);
-        tmp[4] = atan(tmp[4]);
-        tmp[5] = atan(tmp[5]);
-        tmp[6] = atan(tmp[6]);
-        tmp[7] = atan(tmp[7]);
-        return _mm256_loadu_ps(tmp);
+        return atan256_ps(x);
     }
 #if __AVX512F__
     __m512 func_pack16(const __m512& x) const
     {
-        //TODO avx512 optimize
-        float tmp[16];
-        _mm512_storeu_ps(tmp, x);
-        for (int i = 0; i < 16; i++)
-            tmp[i] = atan(tmp[i]);
-        return _mm512_loadu_ps(tmp);
+        return atan512_ps(x);
     }
 #endif // __AVX512F__
 #endif // __AVX__
@@ -569,7 +521,7 @@ struct unary_op_tanh
 {
     float func(const float& x) const
     {
-        return (float)tanh(x);
+        return (float)tanhf(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const
@@ -595,7 +547,7 @@ struct unary_op_log10
 {
     float func(const float& x) const
     {
-        return (float)log10(x);
+        return (float)log10f(x);
     }
 #if __SSE2__
     __m128 func_pack4(const __m128& x) const

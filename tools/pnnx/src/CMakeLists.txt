@@ -160,6 +160,7 @@ set(pnnx_pass_level2_SRCS
     pass_level2/F_relu.cpp
     pass_level2/F_relu6.cpp
     pass_level2/F_rrelu.cpp
+    pass_level2/F_scaled_dot_product_attention.cpp
     pass_level2/F_selu.cpp
     pass_level2/F_sigmoid.cpp
     pass_level2/F_silu.cpp
@@ -241,11 +242,13 @@ set(pnnx_pass_level2_SRCS
     pass_level2/torch_randn.cpp
     pass_level2/torch_randn_like.cpp
     pass_level2/torch_real.cpp
+    pass_level2/torch_repeat_interleave.cpp
     pass_level2/torch_roll.cpp
     pass_level2/torch_scatter_add.cpp
     pass_level2/torch_split.cpp
     pass_level2/torch_squeeze.cpp
     pass_level2/torch_stack.cpp
+    pass_level2/torch_std.cpp
     pass_level2/torch_sum.cpp
     pass_level2/torch_permute.cpp
     pass_level2/torch_tensor_split.cpp
@@ -255,6 +258,8 @@ set(pnnx_pass_level2_SRCS
     pass_level2/torch_var.cpp
     pass_level2/torch_zeros.cpp
     pass_level2/torch_zeros_like.cpp
+    pass_level2/torch_stft.cpp
+    pass_level2/torch_istft.cpp
     pass_level2/torch_fft_irfft.cpp
     pass_level2/torch_fft_irfft2.cpp
     pass_level2/torch_fft_irfftn.cpp
@@ -287,6 +292,7 @@ set(pnnx_pass_level3_SRCS
     pass_level3/fuse_einsum_operands.cpp
     pass_level3/fuse_expression.cpp
     pass_level3/fuse_index_expression.cpp
+    pass_level3/fuse_maxpool_unpack.cpp
     pass_level3/fuse_multiheadattention_unpack.cpp
     pass_level3/fuse_rnn_unpack.cpp
     pass_level3/rename_F_conv_transposend.cpp
@@ -327,7 +333,9 @@ set(pnnx_pass_level5_SRCS
     pass_level5/fuse_pad_conv1d.cpp
     pass_level5/fuse_pad_conv2d.cpp
     pass_level5/fuse_pixel_unshuffle.cpp
+    pass_level5/fuse_layernorm.cpp
     pass_level5/fuse_multiheadattention.cpp
+    pass_level5/fuse_scaled_dot_product_attention.cpp
     pass_level5/fuse_select_to_unbind.cpp
     pass_level5/fuse_slice_copy.cpp
     pass_level5/fuse_slice_indices.cpp

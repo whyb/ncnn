@@ -21,6 +21,7 @@ git submodule update --init
 - [Build for AllWinner D1](#build-for-allwinner-d1)
 - [Build for Loongson 2K1000](#build-for-loongson-2k1000)
 - [Build for Termux on Android](#build-for-termux-on-android)
+- [Build for QNX](#build-for-qnx)
 
 ***
 
@@ -147,9 +148,9 @@ Build ncnn library (replace <protobuf-root-dir> with a proper path):
 
 ```shell
 cd <ncnn-root-dir>
-mkdir -p build
-cd build
-cmake -A x64 -DCMAKE_INSTALL_PREFIX=%cd%/install -DProtobuf_INCLUDE_DIR=<protobuf-root-dir>/build/install/include -DProtobuf_LIBRARIES=<protobuf-root-dir>/build/install/lib/libprotobuf.lib -DProtobuf_PROTOC_EXECUTABLE=<protobuf-root-dir>/build/install/bin/protoc.exe -DNCNN_VULKAN=ON ..
+mkdir -p protobuf_build
+cd protobuf_build
+cmake -A x64 -DCMAKE_INSTALL_PREFIX=%cd%/install -DProtobuf_INCLUDE_DIR=<protobuf-root-dir>/protobuf_build/install/include -DProtobuf_LIBRARIES=<protobuf-root-dir>/protobuf_build/install/lib/libprotobuf.lib -DProtobuf_PROTOC_EXECUTABLE=<protobuf-root-dir>/protobuf_build/install/bin/protoc.exe -DNCNN_VULKAN=ON ..
 cmake --build . --config Release -j 2
 cmake --build . --config Release --target install
 ```
@@ -709,3 +710,33 @@ cd ../examples
 ../build/examples/squeezenet ../images/128-ncnn.png
 ```
 
+### Build for QNX
+
+Set QNX environment variables
+
+```shell
+export QNX_HOST=/opt/qnx710/host/linux/x86_64
+export QNX_TARGET=/opt/qnx710/target/qnx7
+```
+
+Create ld link to solve 'cannot find ld' issue
+
+```shell
+cd ${QNX_HOST}/usr/bin/
+ln -s aarch64-unknown-nto-qnx7.1.0-ld ld
+```
+
+Build ncnn with cmake
+
+```shell
+git clone https://github.com/Tencent/ncnn.git
+cd ncnn
+git submodule update --init
+mkdir -p build-qnx
+cd build-qnx
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=../toolchains/qnx710.toolchain.cmake ..
+make -j$(nproc)
+make install
+```
+
+Pick `build-qnx/install` folder for further usage.
