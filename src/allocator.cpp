@@ -408,8 +408,8 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     }
 #if !defined(VMA_MEMORY_BUDGET) || VMA_MEMORY_BUDGET == 1
     if (vkdev->info.support_VK_EXT_memory_budget()
-        && (GetVulkanApiVersion() >= VK_API_VERSION_1_1 
-        || support_VK_KHR_get_physical_device_properties2))
+            && (GetVulkanApiVersion() >= VK_API_VERSION_1_1
+                || support_VK_KHR_get_physical_device_properties2))
     {
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     }
@@ -449,7 +449,7 @@ void VkAllocator::clear()
 {
 #if ENABLE_VMA_ALLOCATOR
     vmaDestroyAllocator(vmaAllocator); //destroy vma allocator
-#endif // ENABLE_VMA_ALLOCATOR
+#endif                                 // ENABLE_VMA_ALLOCATOR
 }
 
 static inline size_t round_up(size_t n, size_t multiple)

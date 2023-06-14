@@ -309,7 +309,7 @@ public:
     bool coherent;
 #if ENABLE_VMA_ALLOCATOR
     VmaAllocator vmaAllocator; //vma
-#endif // ENABLE_VMA_ALLOCATOR
+#endif                         // ENABLE_VMA_ALLOCATOR
 
 protected:
     VkBuffer create_buffer(size_t size, VkBufferUsageFlags usage);
