@@ -28,7 +28,6 @@
 #include "vk_mem_alloc.h"
 #endif // ENABLE_VMA_ALLOCATOR
 
-
 #include "platform.h"
 
 #include <stdlib.h>

@@ -366,18 +366,18 @@ void UnlockedPoolAllocator::fastFree(void* ptr)
 #if ENABLE_VMA_ALLOCATOR
 static constexpr uint32_t GetVulkanApiVersion()
 {
-//#if VMA_VULKAN_VERSION == 1003000
-//    return VK_API_VERSION_1_3;
-//#elif VMA_VULKAN_VERSION == 1002000
+    //#if VMA_VULKAN_VERSION == 1003000
+    //    return VK_API_VERSION_1_3;
+    //#elif VMA_VULKAN_VERSION == 1002000
     return VK_API_VERSION_1_2;
-//#elif VMA_VULKAN_VERSION == 1001000
-//    return VK_API_VERSION_1_1;
-//#elif VMA_VULKAN_VERSION == 1000000
-//    return VK_API_VERSION_1_0;
-//#else
-//#error Invalid VMA_VULKAN_VERSION.
-//    return UINT32_MAX;
-//#endif
+    //#elif VMA_VULKAN_VERSION == 1001000
+    //    return VK_API_VERSION_1_1;
+    //#elif VMA_VULKAN_VERSION == 1000000
+    //    return VK_API_VERSION_1_0;
+    //#else
+    //#error Invalid VMA_VULKAN_VERSION.
+    //    return UINT32_MAX;
+    //#endif
 }
 #endif // ENABLE_VMA_ALLOCATOR
 
@@ -407,8 +407,8 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     }
 #if !defined(VMA_MEMORY_BUDGET) || VMA_MEMORY_BUDGET == 1
     if (vkdev->info.support_VK_EXT_memory_budget()
-        && (GetVulkanApiVersion() >= VK_API_VERSION_1_1
-            || support_VK_KHR_get_physical_device_properties2))
+            && (GetVulkanApiVersion() >= VK_API_VERSION_1_1
+                || support_VK_KHR_get_physical_device_properties2))
     {
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     }
@@ -554,7 +554,6 @@ VkBuffer VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage)
     return buffer;
 }
 #endif // ENABLE_VMA_ALLOCATOR
-
 
 VkDeviceMemory VkAllocator::allocate_memory(size_t size, uint32_t memory_type_index)
 {
