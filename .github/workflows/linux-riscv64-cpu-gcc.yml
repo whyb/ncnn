@@ -34,7 +34,7 @@ jobs:
   linux-gcc-riscv64:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: cache-qemu
       id: cache-qemu
@@ -49,7 +49,7 @@ jobs:
         sudo apt-get install autoconf automake autotools-dev ninja-build
     - name: checkout-qemu
       if: steps.cache-qemu.outputs.cache-hit != 'true'
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: qemu/qemu
         path: qemu
@@ -83,20 +83,26 @@ jobs:
   linux-gcc-riscv64-c906:
     runs-on: [self-hosted, linux, centos]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: configure
       run: |
         export RISCV_ROOT_PATH=/data/action/osd/Xuantie-900-gcc-linux-5.10.4-glibc-x86_64-V2.6.1
         mkdir build && cd build
-        cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/c906-v226.toolchain.cmake -DCMAKE_BUILD_TYPE=release -DNCNN_OPENMP=OFF -DNCNN_THREADS=OFF -DNCNN_RUNTIME_CPU=OFF -DNCNN_RVV=ON -DNCNN_SIMPLEOCV=ON -DNCNN_BUILD_EXAMPLES=ON ..
+        cmake -DCMAKE_TOOLCHAIN_FILE=../toolchains/c906-v226.toolchain.cmake -DCMAKE_BUILD_TYPE=release -DNCNN_OPENMP=OFF -DNCNN_THREADS=OFF -DNCNN_RUNTIME_CPU=OFF -DNCNN_RVV=ON -DNCNN_SIMPLEOCV=ON -DNCNN_BUILD_EXAMPLES=ON -DNCNN_BUILD_TESTS=ON ..
     - name: build
       run: cmake --build build -j 4
+
+    - name: test
+      run: |
+        export PATH=/data/action/osd/xuantie-qemu-x86_64-Ubuntu-18.04-20230413-0706/bin:$PATH
+        cd build
+        TESTS_EXECUTABLE_LOADER=qemu-riscv64 TESTS_EXECUTABLE_LOADER_ARGUMENTS="-cpu;c906fdv" ctest --output-on-failure -j 4
 
   linux-gcc-riscv64-rvv:
     runs-on: [self-hosted, linux, centos]
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     #- name: cache-qemu
       #id: cache-qemu
@@ -111,7 +117,7 @@ jobs:
         #sudo apt-get install autoconf automake autotools-dev ninja-build
     #- name: checkout-qemu
       #if: steps.cache-qemu.outputs.cache-hit != 'true'
-      #uses: actions/checkout@v3
+      #uses: actions/checkout@v4
       #with:
         #repository: qemu/qemu
         #path: qemu
@@ -141,7 +147,7 @@ jobs:
 
     #- name: checkout-riscv-gnu-toolchain
       #if: steps.cache-riscv.outputs.cache-hit != 'true'
-      #uses: actions/checkout@v3
+      #uses: actions/checkout@v4
       #with:
         #repository: riscv/riscv-gnu-toolchain
         #path: riscv-gnu-toolchain

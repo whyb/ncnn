@@ -16,7 +16,6 @@
 
 #include "cpu.h"
 
-#include <math.h>
 #include <string.h>
 
 #ifdef _MSC_VER
@@ -253,6 +252,13 @@ Layer* create_layer(int index)
     }
     else
 #endif // NCNN_RUNTIME_CPU && NCNN_AVX
+#if NCNN_RUNTIME_CPU && NCNN_LASX
+    if (ncnn::cpu_support_loongarch_lasx())
+    {
+        layer_creator = layer_registry_lasx[index].creator;
+    }
+    else
+#endif // NCNN_RUNTIME_CPU && NCNN_LASX
 #if NCNN_RUNTIME_CPU && NCNN_LSX
     if (ncnn::cpu_support_loongarch_lsx())
     {

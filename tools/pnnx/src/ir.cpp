@@ -291,6 +291,13 @@ Parameter::Parameter(const torch::jit::Node* value_node)
             type = 5;
             for (const auto& x : value_node->inputs())
             {
+                if (!x->node()->hasAttribute(torch::jit::attr::value))
+                {
+                    fprintf(stderr, "no attribute value in int list\n");
+                    ai.push_back(0);
+                    continue;
+                }
+
                 ai.push_back((int)x->node()->i(torch::jit::attr::value));
             }
             break;
@@ -300,6 +307,13 @@ Parameter::Parameter(const torch::jit::Node* value_node)
             type = 6;
             for (const auto& x : value_node->inputs())
             {
+                if (!x->node()->hasAttribute(torch::jit::attr::value))
+                {
+                    fprintf(stderr, "no attribute value in float list\n");
+                    af.push_back(0.f);
+                    continue;
+                }
+
                 af.push_back((float)x->node()->f(torch::jit::attr::value));
             }
             break;
@@ -309,6 +323,13 @@ Parameter::Parameter(const torch::jit::Node* value_node)
             type = 7;
             for (const auto& x : value_node->inputs())
             {
+                if (!x->node()->hasAttribute(torch::jit::attr::value))
+                {
+                    fprintf(stderr, "no attribute value in string list\n");
+                    as.push_back("");
+                    continue;
+                }
+
                 as.push_back(x->node()->s(torch::jit::attr::value));
             }
             break;
@@ -319,6 +340,13 @@ Parameter::Parameter(const torch::jit::Node* value_node)
             type = 11;
             for (const auto& x : value_node->inputs())
             {
+                if (!x->node()->hasAttribute(torch::jit::attr::value))
+                {
+                    fprintf(stderr, "no attribute value in complex list\n");
+                    ac.push_back(std::complex<float>(0.f, 0.f));
+                    continue;
+                }
+
                 ac.push_back(std::complex<float>(x->node()->c(torch::jit::attr::value)));
             }
             break;
@@ -1250,6 +1278,7 @@ static std::string expand_expression(const Operator* op)
                  || t == "log10"
                  || t == "neg"
                  || t == "reciprocal"
+                 || t == "round"
                  || t == "rsqrt"
                  || t == "sign"
                  || t == "sin"
@@ -1278,6 +1307,7 @@ static std::string expand_expression(const Operator* op)
             if (t == "log10") unaryop = "torch.log10";
             if (t == "neg") unaryop = "torch.neg";
             if (t == "reciprocal") unaryop = "torch.reciprocal";
+            if (t == "round") unaryop = "torch.round";
             if (t == "rsqrt") unaryop = "torch.rsqrt";
             if (t == "sign") unaryop = "torch.sign";
             if (t == "sin") unaryop = "torch.sin";
@@ -1295,10 +1325,20 @@ static std::string expand_expression(const Operator* op)
             exprstack.push(r);
         }
         else if (t == "atan2"
+                 || t == "fmod"
+                 || t == "max"
+                 || t == "maximum"
+                 || t == "min"
+                 || t == "minimum"
                  || t == "pow")
         {
             std::string binaryop;
             if (t == "atan2") binaryop = "torch.atan2";
+            if (t == "fmod") binaryop = "torch.fmod";
+            if (t == "max") binaryop = "torch.max";
+            if (t == "maximum") binaryop = "torch.maximum";
+            if (t == "min") binaryop = "torch.min";
+            if (t == "minimum") binaryop = "torch.minimum";
             if (t == "pow") binaryop = "torch.pow";
 
             std::string a = exprstack.top();
@@ -1309,7 +1349,17 @@ static std::string expand_expression(const Operator* op)
             std::string r = binaryop + "(" + a + ", " + b + ")";
             exprstack.push(r);
         }
-        else if (t == "add" || t == "sub" || t == "mul" || t == "div" || t == "floor_divide" || t == "and" || t == "or" || t == "xor" || t == "lshift" || t == "rshift")
+        else if (t == "add"
+                 || t == "sub"
+                 || t == "mul"
+                 || t == "div"
+                 || t == "floor_divide"
+                 || t == "remainder"
+                 || t == "and"
+                 || t == "or"
+                 || t == "xor"
+                 || t == "lshift"
+                 || t == "rshift")
         {
             std::string binaryop;
             if (t == "add") binaryop = "+";
@@ -1317,6 +1367,7 @@ static std::string expand_expression(const Operator* op)
             if (t == "mul") binaryop = "*";
             if (t == "div") binaryop = "/";
             if (t == "floor_divide") binaryop = "//";
+            if (t == "remainder") binaryop = "%";
             if (t == "and") binaryop = "&";
             if (t == "or") binaryop = "|";
             if (t == "xor") binaryop = "^";
@@ -1606,7 +1657,18 @@ int Graph::python(const std::string& pypath, const std::string& pnnxbinpath)
                     fprintf(pyfp, "(");
                     for (size_t i = 0; i < param.ai.size(); i++)
                     {
-                        fprintf(pyfp, "%d", param.ai[i]);
+                        if ((op->type == "nn.AdaptiveAvgPool2d"
+                                || op->type == "nn.AdaptiveAvgPool3d"
+                                || op->type == "nn.AdaptiveMaxPool2d"
+                                || op->type == "nn.AdaptiveMaxPool3d")
+                                && it.first == "output_size" && param.ai[i] == 0)
+                        {
+                            fprintf(pyfp, "None");
+                        }
+                        else
+                        {
+                            fprintf(pyfp, "%d", param.ai[i]);
+                        }
                         if (i + 1 != param.ai.size() || param.ai.size() == 1)
                             fprintf(pyfp, ",");
                     }
@@ -1785,11 +1847,9 @@ int Graph::python(const std::string& pypath, const std::string& pnnxbinpath)
         fprintf(pyfp, "        return nn.Parameter(self.load_pnnx_bin_as_tensor(archive, key, shape, dtype), requires_grad)\n");
         fprintf(pyfp, "\n");
         fprintf(pyfp, "    def load_pnnx_bin_as_tensor(self, archive, key, shape, dtype):\n");
-        fprintf(pyfp, "        _, tmppath = tempfile.mkstemp()\n");
-        fprintf(pyfp, "        tmpf = open(tmppath, 'wb')\n");
-        fprintf(pyfp, "        with archive.open(key) as keyfile:\n");
+        fprintf(pyfp, "        fd, tmppath = tempfile.mkstemp()\n");
+        fprintf(pyfp, "        with os.fdopen(fd, 'wb') as tmpf, archive.open(key) as keyfile:\n");
         fprintf(pyfp, "            tmpf.write(keyfile.read())\n");
-        fprintf(pyfp, "        tmpf.close()\n");
         fprintf(pyfp, "        m = np.memmap(tmppath, dtype=dtype, mode='r', shape=shape).copy()\n");
         fprintf(pyfp, "        os.remove(tmppath)\n");
         fprintf(pyfp, "        return torch.from_numpy(m)\n");
@@ -2152,11 +2212,39 @@ int Graph::python(const std::string& pypath, const std::string& pnnxbinpath)
 
                 if (op->type.substr(0, 7) == "Tensor.")
                 {
-                    fprintf(pyfp, " = v_%s.%s(", sanitize_identifier(op->inputs[0]->name).c_str(), op->type.substr(7).c_str());
-
-                    for (size_t i = 1; i < op->inputs.size(); i++)
+                    if (op->type == "Tensor.fill")
                     {
-                        fprintf(pyfp, "v_%s, ", sanitize_identifier(op->inputs[i]->name).c_str());
+                        fprintf(pyfp, " = v_%s.fill_(", sanitize_identifier(op->inputs[0]->name).c_str());
+                    }
+                    else
+                    {
+                        fprintf(pyfp, " = v_%s.%s(", sanitize_identifier(op->inputs[0]->name).c_str(), op->type.substr(7).c_str());
+                    }
+
+                    if (op->inputnames.size() == op->inputs.size())
+                    {
+                        for (size_t i = 1; i < op->inputs.size(); i++)
+                        {
+                            if (!op->inputnames[i].empty())
+                                continue;
+
+                            fprintf(pyfp, "v_%s, ", sanitize_identifier(op->inputs[i]->name).c_str());
+                        }
+
+                        for (size_t i = 1; i < op->inputs.size(); i++)
+                        {
+                            if (op->inputnames[i].empty())
+                                continue;
+
+                            fprintf(pyfp, "%s=v_%s, ", op->inputnames[i].c_str(), sanitize_identifier(op->inputs[i]->name).c_str());
+                        }
+                    }
+                    else
+                    {
+                        for (size_t i = 1; i < op->inputs.size(); i++)
+                        {
+                            fprintf(pyfp, "v_%s, ", sanitize_identifier(op->inputs[i]->name).c_str());
+                        }
                     }
                 }
                 else
@@ -2250,7 +2338,18 @@ int Graph::python(const std::string& pypath, const std::string& pnnxbinpath)
                         fprintf(pyfp, "(");
                         for (size_t i = 0; i < param.ai.size(); i++)
                         {
-                            fprintf(pyfp, "%d", param.ai[i]);
+                            if ((op->type == "F.adaptive_avg_pool2d"
+                                    || op->type == "F.adaptive_avg_pool3d"
+                                    || op->type == "F.adaptive_max_pool2d"
+                                    || op->type == "F.adaptive_max_pool3d")
+                                    && it.first == "output_size" && param.ai[i] == 0)
+                            {
+                                fprintf(pyfp, "None");
+                            }
+                            else
+                            {
+                                fprintf(pyfp, "%d", param.ai[i]);
+                            }
                             if (i + 1 != param.ai.size() || param.ai.size() == 1)
                                 fprintf(pyfp, ",");
                         }
@@ -2587,6 +2686,14 @@ int Graph::python(const std::string& pypath, const std::string& pnnxbinpath)
 
             fprintf(pyfp, ")\n");
         }
+    }
+
+    fprintf(pyfp, "\n");
+
+    // main
+    {
+        fprintf(pyfp, "if __name__ == \"__main__\":\n");
+        fprintf(pyfp, "    print(test_inference())\n");
     }
 
     fclose(pyfp);
