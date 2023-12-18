@@ -20,7 +20,6 @@
 #if __ANDROID_API__ >= 26
 #include <android/hardware_buffer.h>
 #endif // __ANDROID_API__ >= 26
-
 #if ENABLE_VMA_ALLOCATOR
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -367,18 +366,18 @@ void UnlockedPoolAllocator::fastFree(void* ptr)
 #if ENABLE_VMA_ALLOCATOR
 static constexpr uint32_t GetVulkanApiVersion()
 {
-#if VMA_VULKAN_VERSION == 1003000
-    return VK_API_VERSION_1_3;
-#elif VMA_VULKAN_VERSION == 1002000
+//#if VMA_VULKAN_VERSION == 1003000
+//    return VK_API_VERSION_1_3;
+//#elif VMA_VULKAN_VERSION == 1002000
     return VK_API_VERSION_1_2;
-#elif VMA_VULKAN_VERSION == 1001000
-    return VK_API_VERSION_1_1;
-#elif VMA_VULKAN_VERSION == 1000000
-    return VK_API_VERSION_1_0;
-#else
-#error Invalid VMA_VULKAN_VERSION.
-    return UINT32_MAX;
-#endif
+//#elif VMA_VULKAN_VERSION == 1001000
+//    return VK_API_VERSION_1_1;
+//#elif VMA_VULKAN_VERSION == 1000000
+//    return VK_API_VERSION_1_0;
+//#else
+//#error Invalid VMA_VULKAN_VERSION.
+//    return UINT32_MAX;
+//#endif
 }
 #endif // ENABLE_VMA_ALLOCATOR
 
@@ -408,8 +407,8 @@ VkAllocator::VkAllocator(const VulkanDevice* _vkdev)
     }
 #if !defined(VMA_MEMORY_BUDGET) || VMA_MEMORY_BUDGET == 1
     if (vkdev->info.support_VK_EXT_memory_budget()
-            && (GetVulkanApiVersion() >= VK_API_VERSION_1_1
-                || support_VK_KHR_get_physical_device_properties2))
+        && (GetVulkanApiVersion() >= VK_API_VERSION_1_1
+            || support_VK_KHR_get_physical_device_properties2))
     {
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     }
@@ -506,6 +505,32 @@ int VkAllocator::invalidate(VkBufferMemory* ptr)
     return 0;
 }
 
+#if ENABLE_VMA_ALLOCATOR
+void VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage, VkBuffer& vkbuf, VmaAllocation& vma_allocation)
+{
+    VkBufferCreateInfo bufferCreateInfo;
+    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferCreateInfo.pNext = 0;
+    bufferCreateInfo.flags = 0;
+    bufferCreateInfo.size = size;
+    bufferCreateInfo.usage = usage;
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    bufferCreateInfo.queueFamilyIndexCount = 0;
+    bufferCreateInfo.pQueueFamilyIndices = 0;
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE; //VMA_MEMORY_USAGE_AUTO;
+    allocInfo.flags = VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+    //VmaAllocationCreateInfo::flags must be VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT or VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
+    VkResult ret = vmaCreateBuffer(vmaAllocator, &bufferCreateInfo, &allocInfo, &vkbuf, &vma_allocation, nullptr);
+    if (ret != VK_SUCCESS)
+    {
+        NCNN_LOGE("vmaCreateBuffer failed %d", ret);
+        return;
+    }
+    return;
+}
+#else
 VkBuffer VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage)
 {
     VkBufferCreateInfo bufferCreateInfo;
@@ -528,31 +553,8 @@ VkBuffer VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage)
 
     return buffer;
 }
-
-#if ENABLE_VMA_ALLOCATOR
-void VkAllocator::create_buffer(size_t size, VkBufferUsageFlags usage, VkBuffer& vkbuf, VmaAllocation& vma_allocation)
-{
-    VkBufferCreateInfo bufferCreateInfo;
-    bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreateInfo.pNext = 0;
-    bufferCreateInfo.flags = 0;
-    bufferCreateInfo.size = size;
-    bufferCreateInfo.usage = usage;
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.queueFamilyIndexCount = 0;
-    bufferCreateInfo.pQueueFamilyIndices = 0;
-
-    VmaAllocationCreateInfo allocInfo = {};
-    allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    VkResult ret = vmaCreateBuffer(vmaAllocator, &bufferCreateInfo, &allocInfo, &vkbuf, &vma_allocation, nullptr);
-    if (ret != VK_SUCCESS)
-    {
-        NCNN_LOGE("vmaCreateBuffer failed %d", ret);
-        return;
-    }
-    return;
-}
 #endif // ENABLE_VMA_ALLOCATOR
+
 
 VkDeviceMemory VkAllocator::allocate_memory(size_t size, uint32_t memory_type_index)
 {
@@ -743,6 +745,7 @@ void VkBlobAllocator::clear()
 
         if (mappable)
             vkUnmapMemory(vkdev->vkdevice(), ptr->memory);
+
 #if ENABLE_VMA_ALLOCATOR
         vmaDestroyBuffer(vmaAllocator, ptr->buffer, ptr->vma_allocation);
 #else

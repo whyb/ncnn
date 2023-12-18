@@ -19,6 +19,15 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #endif
+#include <vulkan/vulkan.h>
+
+#define VMA_VULKAN_VERSION   1002000 //vulkan 1.2
+#define ENABLE_VMA_ALLOCATOR 1
+
+#if ENABLE_VMA_ALLOCATOR
+#include "vk_mem_alloc.h"
+#endif // ENABLE_VMA_ALLOCATOR
+
 
 #include "platform.h"
 
@@ -29,12 +38,6 @@
 #include <android/hardware_buffer.h>
 #endif // __ANDROID_API__ >= 26
 #endif // NCNN_PLATFORM_API
-
-#include <vulkan/vulkan.h>
-
-#if ENABLE_VMA_ALLOCATOR
-#include "vk_mem_alloc.h"
-#endif // ENABLE_VMA_ALLOCATOR
 
 namespace ncnn {
 
@@ -308,9 +311,10 @@ public:
 #endif                         // ENABLE_VMA_ALLOCATOR
 
 protected:
-    VkBuffer create_buffer(size_t size, VkBufferUsageFlags usage);
 #if ENABLE_VMA_ALLOCATOR
     void create_buffer(size_t size, VkBufferUsageFlags usage, VkBuffer& vkbuf, VmaAllocation& vma_allocation);
+#else
+    VkBuffer create_buffer(size_t size, VkBufferUsageFlags usage);
 #endif // ENABLE_VMA_ALLOCATOR
     VkDeviceMemory allocate_memory(size_t size, uint32_t memory_type_index);
     VkDeviceMemory allocate_dedicated_memory(size_t size, uint32_t memory_type_index, VkImage image, VkBuffer buffer);
